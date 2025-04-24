@@ -1,0 +1,7 @@
+for _, lbl in pairs(game:GetService("CoreGui"):FindFirstChild("ToraScript"):FindFirstChild("ImageButton"):FindFirstChild("Frame"):GetChildren()) do
+        if lbl:IsA("TextLabel") then
+            if lbl.Text == " YouTube: Tora IsMe" then
+                lbl.Text = " Made By: builetuananh1"
+        end
+    end
+end
