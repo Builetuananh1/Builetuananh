@@ -1,0 +1,74 @@
+name: Build Zink cho iOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Cài đặt công cụ
+        run: |
+          brew install meson ninja bison flex pkg-config wget
+
+      - name: Tải MoltenVK 1.4.1
+        run: |
+          git clone --branch v1.4.1 https://github.com/KhronosGroup/MoltenVK.git
+
+      - name: Tải và giải nén Mesa 26.1.1
+        run: |
+          wget https://archive.mesa3d.org/mesa-26.1.1.tar.xz
+          tar -xf mesa-26.1.1.tar.xz
+
+      - name: Tạo cấu hình Build cho iPhone (arm64)
+        run: |
+          IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          
+          cat <<EOF > ios.ini
+          [binaries]
+          c = 'clang'
+          cpp = 'clang++'
+          objc = 'clang'
+          objcpp = 'clang++'
+          ar = 'ar'
+          strip = 'strip'
+
+          [built-in options]
+          c_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd']
+          cpp_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd']
+          c_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal']
+          cpp_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal']
+
+          [host_machine]
+          system = 'darwin'
+          subsystem = 'ios'
+          cpu_family = 'aarch64'
+          cpu = 'arm64'
+          endian = 'little'
+          EOF
+
+      - name: Cấu hình Meson
+        run: |
+          cd mesa-26.1.1
+          meson setup build_ios \
+            --cross-file ../ios.ini \
+            -Dbuildtype=release \
+            -Dgallium-drivers=zink \
+            -Dvulkan-drivers= \
+            -Dglx=disabled \
+            -Degl=disabled \
+            -Dosmesa=true \
+            -Dplatforms=apple \
+            -Dllvm=disabled
+
+      - name: Khởi động Ninja (Biên dịch)
+        run: |
+          cd mesa-26.1.1/build_ios
+          ninja
+
+      - name: Xuất file dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: libOSMesa-iOS
+          path: mesa-26.1.1/build_ios/src/gallium/targets/osmesa/libOSMesa.*dylib
