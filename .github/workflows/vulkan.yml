@@ -17,6 +17,13 @@ jobs:
           git clone --branch v1.3.296 https://github.com/KhronosGroup/Vulkan-Loader.git
           git clone --branch v1.3.296 https://github.com/KhronosGroup/Vulkan-Headers.git
 
+      - name: Cài đặt Vulkan-Headers
+        run: |
+          cd Vulkan-Headers
+          mkdir build && cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install-headers
+          make install
+
       - name: Build Loader cho iOS
         run: |
           IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
@@ -27,7 +34,7 @@ jobs:
             -DCMAKE_SYSTEM_PROCESSOR=arm64 \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_SYSROOT=$IOS_SDK \
-            -DVulkanHeaders_DIR=${{ github.workspace }}/Vulkan-Headers \
+            -DCMAKE_PREFIX_PATH=${{ github.workspace }}/install-headers \
             -DBUILD_TESTS=OFF \
             -DENABLE_WERROR=OFF \
             -DBUILD_SHARED_LIBS=ON
