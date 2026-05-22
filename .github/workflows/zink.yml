@@ -11,6 +11,7 @@ jobs:
       - name: install packed
         run: |
           brew install meson ninja bison flex pkg-config wget vulkan-headers
+          pip3 install mako packaging --break-system-packages
 
       - name: install MoltenVK 1.4.1
         run: |
