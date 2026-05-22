@@ -1,4 +1,4 @@
-name: Build Zink cho iOS
+name: Build Zink (EGL) cho iOS
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Cài đặt công cụ
         run: |
-          brew install meson ninja bison flex pkg-config wget
+          brew install meson ninja bison flex pkg-config wget vulkan-headers
 
       - name: Tải MoltenVK 1.4.1
         run: |
@@ -48,7 +48,7 @@ jobs:
           endian = 'little'
           EOF
 
-      - name: Cấu hình Meson
+      - name: Cấu hình Meson (EGL Surfaceless)
         run: |
           cd mesa-26.1.1
           meson setup build_ios \
@@ -57,8 +57,7 @@ jobs:
             -Dgallium-drivers=zink \
             -Dvulkan-drivers= \
             -Dglx=disabled \
-            -Degl=disabled \
-            -Dosmesa=true \
+            -Degl=enabled \
             -Dplatforms=apple \
             -Dllvm=disabled
 
@@ -70,5 +69,5 @@ jobs:
       - name: Xuất file dylib
         uses: actions/upload-artifact@v4
         with:
-          name: libOSMesa-iOS
-          path: mesa-26.1.1/build_ios/src/gallium/targets/osmesa/libOSMesa.*dylib
+          name: libMesa-EGL-iOS
+          path: mesa-26.1.1/build_ios/src/**/*.dylib
