@@ -1,4 +1,4 @@
-name: Build Zink (OSMesa 24.0.5 - Rpath MoltenVK)
+name: Build Zink (OSMesa 24.0.5 - Hack Source MoltenVK)
 
 on:
   workflow_dispatch:
@@ -22,11 +22,17 @@ jobs:
           curl -O -L https://archive.mesa3d.org/mesa-24.0.5.tar.xz
           tar -xf mesa-24.0.5.tar.xz
 
+      - name: Hack Mã Nguồn Ép iOS Nhận MoltenVK
+        run: |
+          cd mesa-24.0.5
+          # Bới tung code C/C++ đổi tên Vulkan thành MoltenVK kèm @rpath cho iOS
+          find . -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.h" \) -exec sed -i '' 's/libvulkan\.1\.dylib/@rpath\/libMoltenVK.dylib/g' {} +
+          find . -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.h" \) -exec sed -i '' 's/libvulkan\.dylib/@rpath\/libMoltenVK.dylib/g' {} +
+
       - name: Tạo cấu hình Build cho iPhone (arm64)
         run: |
           IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           
-          # Cực kỳ quan trọng: Thêm -Wl,-rpath,@loader_path để thư viện biết tự tìm nhau trên iOS
           cat <<EOF > ios.ini
           [binaries]
           c = 'clang'
@@ -74,5 +80,5 @@ jobs:
       - name: Xuất file dylib
         uses: actions/upload-artifact@v4
         with:
-          name: libOSMesa-iOS-Monolithic
+          name: libOSMesa-iOS-Hacked
           path: mesa-24.0.5/build_ios/src/gallium/targets/osmesa/libOSMesa.*dylib
