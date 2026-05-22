@@ -49,13 +49,13 @@ jobs:
           endian = 'little'
           EOF
 
-      - name: setting Meson (OSMesa)
+      - name: setting Meson (OSMesa + Zink)
         run: |
           cd mesa-24.0.5
           meson setup build_ios \
             --cross-file ../ios.ini \
             -Dbuildtype=release \
-            -Dgallium-drivers=zink \
+            -Dgallium-drivers=zink,swrast \
             -Dvulkan-drivers= \
             -Dglx=disabled \
             -Degl=disabled \
