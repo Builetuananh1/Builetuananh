@@ -21,7 +21,7 @@ jobs:
           wget https://archive.mesa3d.org/mesa-26.1.1.tar.xz
           tar -xf mesa-26.1.1.tar.xz
 
-      - name: Tạo cấu hình Build cho iPhone (arm64)
+      - name: Tạo cấu hình Build cho iPhone giả lập macOS (arm64)
         run: |
           IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           
@@ -37,12 +37,12 @@ jobs:
           [built-in options]
           c_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd']
           cpp_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd']
-          c_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal']
-          cpp_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal']
+          c_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal', '-framework', 'CoreGraphics']
+          cpp_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal', '-framework', 'CoreGraphics']
 
           [host_machine]
           system = 'darwin'
-          subsystem = 'ios'
+          subsystem = 'macos'
           cpu_family = 'aarch64'
           cpu = 'arm64'
           endian = 'little'
@@ -58,7 +58,7 @@ jobs:
             -Dvulkan-drivers= \
             -Dglx=disabled \
             -Degl=enabled \
-            -Dplatforms=apple \
+            -Dplatforms=macos \
             -Dllvm=disabled
 
       - name: Khởi động Ninja (Biên dịch)
