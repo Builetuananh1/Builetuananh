@@ -1,4 +1,4 @@
-name: Build Zink (OSMesa 24.0.5) cho iOS
+name: Build Zink (OSMesa 24.0.5 - Đúc nguyên khối)
 
 on:
   workflow_dispatch:
@@ -49,7 +49,7 @@ jobs:
           endian = 'little'
           EOF
 
-      - name: Cấu hình Meson (OSMesa + Zink - Chống X11)
+      - name: Cấu hình Meson (OSMesa Đúc Nguyên Khối)
         run: |
           cd mesa-24.0.5
           meson setup build_ios \
@@ -61,6 +61,7 @@ jobs:
             -Dglx=disabled \
             -Degl=disabled \
             -Dplatforms= \
+            -Dshared-glapi=disabled \
             -Dosmesa=true \
             -Dllvm=disabled
 
@@ -72,5 +73,5 @@ jobs:
       - name: Xuất file dylib
         uses: actions/upload-artifact@v4
         with:
-          name: libOSMesa-iOS
+          name: libOSMesa-iOS-Monolithic
           path: mesa-24.0.5/build_ios/src/gallium/targets/osmesa/libOSMesa.*dylib
