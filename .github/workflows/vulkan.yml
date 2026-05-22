@@ -24,6 +24,7 @@ jobs:
           mkdir build && cd build
           cmake .. \
             -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_SYSTEM_PROCESSOR=arm64 \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_SYSROOT=$IOS_SDK \
             -DVulkanHeaders_DIR=${{ github.workspace }}/Vulkan-Headers \
