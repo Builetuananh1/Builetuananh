@@ -1,4 +1,4 @@
-name: Build Zink (EGL) for iOS
+name: Build Zink (OSMesa 24.0.5) for iOS
 
 on:
   workflow_dispatch:
@@ -8,20 +8,20 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Cài đặt công cụ
+      - name: install setting
         run: |
           brew install meson ninja bison flex pkg-config wget vulkan-headers
 
-      - name: Tải MoltenVK 1.4.1
+      - name: install MoltenVK 1.4.1
         run: |
           git clone --branch v1.4.1 https://github.com/KhronosGroup/MoltenVK.git
 
-      - name: Tải và giải nén Mesa 26.1.1
+      - name: install and untar.xz Mesa 24.0.5
         run: |
-          wget https://archive.mesa3d.org/mesa-26.1.1.tar.xz
-          tar -xf mesa-26.1.1.tar.xz
+          wget https://archive.mesa3d.org/mesa-24.0.5.tar.xz
+          tar -xf mesa-24.0.5.tar.xz
 
-      - name: Tạo cấu hình Build cho iPhone giả lập macOS (arm64)
+      - name: create setting Build for iPhone (arm64)
         run: |
           IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           
@@ -37,37 +37,38 @@ jobs:
           [built-in options]
           c_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd']
           cpp_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd']
-          c_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal', '-framework', 'CoreGraphics']
-          cpp_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal', '-framework', 'CoreGraphics']
+          c_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal']
+          cpp_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal']
 
           [host_machine]
           system = 'darwin'
-          subsystem = 'macos'
+          subsystem = 'ios'
           cpu_family = 'aarch64'
           cpu = 'arm64'
           endian = 'little'
           EOF
 
-      - name: Cấu hình Meson (EGL Surfaceless)
+      - name: settings Meson (OSMesa)
         run: |
-          cd mesa-26.1.1
+          cd mesa-24.0.5
           meson setup build_ios \
             --cross-file ../ios.ini \
             -Dbuildtype=release \
             -Dgallium-drivers=zink \
             -Dvulkan-drivers= \
             -Dglx=disabled \
-            -Degl=enabled \
-            -Dplatforms=macos \
+            -Degl=disabled \
+            -Dosmesa=true \
+            -Dplatforms=apple \
             -Dllvm=disabled
 
-      - name: Khởi động Ninja (Biên dịch)
+      - name: running Ninja (compile)
         run: |
-          cd mesa-26.1.1/build_ios
+          cd mesa-24.0.5/build_ios
           ninja
 
-      - name: Xuất file dylib
+      - name: upload dylib
         uses: actions/upload-artifact@v4
         with:
-          name: libMesa-EGL-iOS
-          path: mesa-26.1.1/build_ios/src/**/*.dylib
+          name: libOSMesa-iOS
+          path: mesa-24.0.5/build_ios/src/gallium/targets/osmesa/libOSMesa.*dylib
