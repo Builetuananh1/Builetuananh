@@ -49,7 +49,7 @@ jobs:
           endian = 'little'
           EOF
 
-      - name: Cấu hình Meson (OSMesa + Zink - Chống X11)
+      - name: Cấu hình Meson (OSMesa + Zink - Ép rỗng platforms)
         run: |
           cd mesa-24.0.5
           meson setup build_ios \
@@ -60,7 +60,7 @@ jobs:
             -Dmoltenvk-dir=${{ github.workspace }}/MoltenVK/MoltenVK \
             -Dglx=disabled \
             -Degl=disabled \
-            -Dplatforms=apple \
+            -Dplatforms= \
             -Dosmesa=true \
             -Dllvm=disabled
 
