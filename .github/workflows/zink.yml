@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Cài đặt công cụ
         run: |
-          brew install meson ninja bison flex pkg-config wget vulkan-headers
+          brew install meson ninja bison flex pkg-config vulkan-headers
           pip3 install mako packaging --break-system-packages
 
       - name: Tải MoltenVK 1.4.1
@@ -19,7 +19,7 @@ jobs:
 
       - name: Tải và giải nén Mesa 24.0.5
         run: |
-          wget https://archive.mesa3d.org/mesa-24.0.5.tar.xz
+          curl -O -L https://archive.mesa3d.org/mesa-24.0.5.tar.xz
           tar -xf mesa-24.0.5.tar.xz
 
       - name: Tạo cấu hình Build cho iPhone (arm64)
