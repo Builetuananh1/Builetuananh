@@ -1,4 +1,4 @@
-name: Build Zink (OSMesa 24.0.5) for iOS
+name: Build Zink (OSMesa 24.0.5) cho iOS
 
 on:
   workflow_dispatch:
@@ -8,20 +8,20 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: install setting
+      - name: Cài đặt công cụ
         run: |
           brew install meson ninja bison flex pkg-config wget vulkan-headers
 
-      - name: install MoltenVK 1.4.1
+      - name: Tải MoltenVK 1.4.1
         run: |
           git clone --branch v1.4.1 https://github.com/KhronosGroup/MoltenVK.git
 
-      - name: install and untar.xz Mesa 24.0.5
+      - name: Tải và giải nén Mesa 24.0.5
         run: |
           wget https://archive.mesa3d.org/mesa-24.0.5.tar.xz
           tar -xf mesa-24.0.5.tar.xz
 
-      - name: create setting Build for iPhone (arm64)
+      - name: Tạo cấu hình Build cho iPhone (arm64)
         run: |
           IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           
@@ -48,7 +48,7 @@ jobs:
           endian = 'little'
           EOF
 
-      - name: settings Meson (OSMesa)
+      - name: Cấu hình Meson (OSMesa)
         run: |
           cd mesa-24.0.5
           meson setup build_ios \
@@ -59,15 +59,14 @@ jobs:
             -Dglx=disabled \
             -Degl=disabled \
             -Dosmesa=true \
-            -Dplatforms=apple \
             -Dllvm=disabled
 
-      - name: running Ninja (compile)
+      - name: Khởi động Ninja (Biên dịch)
         run: |
           cd mesa-24.0.5/build_ios
           ninja
 
-      - name: upload dylib
+      - name: Xuất file dylib
         uses: actions/upload-artifact@v4
         with:
           name: libOSMesa-iOS
