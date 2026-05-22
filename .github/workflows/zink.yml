@@ -1,4 +1,4 @@
-name: Build Zink (OSMesa 24.0.5 - Hack Source MoltenVK)
+name: Build Zink (Gộp Glapi + Auto Env + Fix Path)
 
 on:
   workflow_dispatch:
@@ -22,17 +22,43 @@ jobs:
           curl -O -L https://archive.mesa3d.org/mesa-24.0.5.tar.xz
           tar -xf mesa-24.0.5.tar.xz
 
-      - name: Hack Mã Nguồn Ép iOS Nhận MoltenVK
+      - name: 1. Patch đường dẫn Vulkan Loader (Ép tìm file lân cận)
         run: |
           cd mesa-24.0.5
-          # Bới tung code C/C++ đổi tên Vulkan thành MoltenVK kèm @rpath cho iOS
-          find . -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.h" \) -exec sed -i '' 's/libvulkan\.1\.dylib/@rpath\/libMoltenVK.dylib/g' {} +
-          find . -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.h" \) -exec sed -i '' 's/libvulkan\.dylib/@rpath\/libMoltenVK.dylib/g' {} +
+          find . -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.h" \) -exec sed -i '' 's|"libvulkan\.1\.dylib"|"@loader_path/libvulkan.1.dylib", "libvulkan.1.dylib"|g' {} +
+
+      - name: 2. Tiêm Code Auto-Environment vào OSMesa
+        run: |
+          cd mesa-24.0.5
+          cat << 'EOF' >> src/gallium/targets/osmesa/osmesa.c
+
+          #include <stdlib.h>
+          #include <dlfcn.h>
+          #include <string.h>
+
+          __attribute__((constructor))
+          void pojaviOS_auto_env() {
+              // Ép chạy Zink và fix màu cỏ
+              setenv("GALLIUM_DRIVER", "zink", 1);
+              setenv("MVK_CONFIG_FULL_IMAGE_VIEW_SWIZZLE", "1", 1);
+              
+              // Tự mò đường dẫn thư mục Frameworks ngẫu nhiên của iOS
+              Dl_info info;
+              if (dladdr((void*)pojaviOS_auto_env, &info)) {
+                  char json_path[1024];
+                  strncpy(json_path, info.dli_fname, sizeof(json_path));
+                  char *last_slash = strrchr(json_path, '/');
+                  if (last_slash) {
+                      strcpy(last_slash + 1, "MoltenVK_icd.json");
+                      setenv("VK_ICD_FILENAMES", json_path, 1);
+                  }
+              }
+          }
+          EOF
 
       - name: Tạo cấu hình Build cho iPhone (arm64)
         run: |
           IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-          
           cat <<EOF > ios.ini
           [binaries]
           c = 'clang'
@@ -56,7 +82,7 @@ jobs:
           endian = 'little'
           EOF
 
-      - name: Cấu hình Meson (OSMesa Đúc Nguyên Khối)
+      - name: Cấu hình Meson (ÉP GỘP GLAPI - shared-glapi=disabled)
         run: |
           cd mesa-24.0.5
           meson setup build_ios \
@@ -72,7 +98,7 @@ jobs:
             -Dosmesa=true \
             -Dllvm=disabled
 
-      - name: Khởi động Ninja (Biên dịch)
+      - name: Build
         run: |
           cd mesa-24.0.5/build_ios
           ninja
@@ -80,5 +106,5 @@ jobs:
       - name: Xuất file dylib
         uses: actions/upload-artifact@v4
         with:
-          name: libOSMesa-iOS-Hacked
+          name: libOSMesa-Gop-ToiThuong
           path: mesa-24.0.5/build_ios/src/gallium/targets/osmesa/libOSMesa.*dylib
