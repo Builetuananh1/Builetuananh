@@ -1,4 +1,4 @@
-name: Build Zink (EGL) cho iOS
+name: Build Zink (EGL) for iOS
 
 on:
   workflow_dispatch:
