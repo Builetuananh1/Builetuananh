@@ -1,4 +1,4 @@
-name: Build Zink (OSMesa 24.0.5 - Đúc nguyên khối)
+name: Build Zink (OSMesa 24.0.5 - Rpath MoltenVK)
 
 on:
   workflow_dispatch:
@@ -26,6 +26,7 @@ jobs:
         run: |
           IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           
+          # Cực kỳ quan trọng: Thêm -Wl,-rpath,@loader_path để thư viện biết tự tìm nhau trên iOS
           cat <<EOF > ios.ini
           [binaries]
           c = 'clang'
@@ -38,8 +39,8 @@ jobs:
           [built-in options]
           c_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd', '-DVK_USE_PLATFORM_IOS_MVK']
           cpp_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd', '-DVK_USE_PLATFORM_IOS_MVK']
-          c_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal', '-framework', 'IOSurface', '-framework', 'UIKit']
-          cpp_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal', '-framework', 'IOSurface', '-framework', 'UIKit']
+          c_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal', '-framework', 'IOSurface', '-framework', 'UIKit', '-Wl,-rpath,@loader_path']
+          cpp_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal', '-framework', 'IOSurface', '-framework', 'UIKit', '-Wl,-rpath,@loader_path']
 
           [host_machine]
           system = 'darwin'
