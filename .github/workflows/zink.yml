@@ -1,4 +1,4 @@
-name: Build Zink 24.0.5 (Gộp Glapi + Auto Env V3)
+name: Build Zink 24.0.5 (Export All - ZIP)
 
 on:
   workflow_dispatch:
@@ -102,8 +102,13 @@ jobs:
           cd mesa-24.0.5/build_ios
           ninja
 
-      - name: Xuất file dylib
+      - name: Nén toàn bộ thư mục Build thành file ZIP
+        run: |
+          cd mesa-24.0.5
+          zip -r Mesa_Full_Build_Output.zip build_ios/
+
+      - name: Xuất file ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: libOSMesa-Mesa24-AutoEnv
-          path: mesa-24.0.5/build_ios/src/gallium/targets/osmesa/libOSMesa.*dylib
+          name: Mesa-Full-Build-ZIP
+          path: mesa-24.0.5/Mesa_Full_Build_Output.zip
