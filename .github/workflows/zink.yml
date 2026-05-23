@@ -1,4 +1,4 @@
-name: Build Zink (libglapi + auto env + fix path)
+name: Build Zink 24.0.5 (Gộp Glapi + Auto Env V3)
 
 on:
   workflow_dispatch:
@@ -8,26 +8,26 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: install packed
+      - name: Cài đặt công cụ
         run: |
           brew install meson ninja bison flex pkg-config vulkan-headers
           pip3 install mako packaging --break-system-packages
 
-      - name: install MoltenVK 1.4.1
+      - name: Tải MoltenVK 1.4.1
         run: |
           git clone --branch v1.4.1 https://github.com/KhronosGroup/MoltenVK.git
 
-      - name: install and unzip Mesa 24.0.5
+      - name: Tải và giải nén Mesa 24.0.5
         run: |
           curl -O -L https://archive.mesa3d.org/mesa-24.0.5.tar.xz
           tar -xf mesa-24.0.5.tar.xz
 
-      - name: 1. patch path Vulkan Loader fully (1 arg)
+      - name: Patch đường dẫn Vulkan Loader
         run: |
           cd mesa-24.0.5
           find . -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.h" \) -exec sed -i '' 's|"libvulkan\.1\.dylib"|"@executable_path/Frameworks/libvulkan.1.dylib"|g' {} +
 
-      - name: 2. inject code auto-environment to OSMesa
+      - name: Tiêm Code Auto-Environment vào OSMesa
         run: |
           cd mesa-24.0.5
           cat << 'EOF' >> src/gallium/targets/osmesa/osmesa.c
@@ -38,9 +38,10 @@ jobs:
 
           __attribute__((constructor))
           void pojaviOS_auto_env() {
-              setenv("GALLIUM_DRIVER", "zink", 1);
+              // Bật fix lỗi cỏ/lá cây
               setenv("MVK_CONFIG_FULL_IMAGE_VIEW_SWIZZLE", "1", 1);
               
+              // Tự mò thư mục Frameworks để móc JSON
               Dl_info info;
               if (dladdr((void*)pojaviOS_auto_env, &info)) {
                   char json_path[1024];
@@ -54,7 +55,7 @@ jobs:
           }
           EOF
 
-      - name: setting build for iPhone (arm64)
+      - name: Tạo cấu hình Build cho iPhone (arm64)
         run: |
           IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           cat <<EOF > ios.ini
@@ -80,7 +81,7 @@ jobs:
           endian = 'little'
           EOF
 
-      - name: setting Meson (libglapi - shared-glapi=disabled)
+      - name: Cấu hình Meson (Gộp glapi)
         run: |
           cd mesa-24.0.5
           meson setup build_ios \
@@ -101,8 +102,8 @@ jobs:
           cd mesa-24.0.5/build_ios
           ninja
 
-      - name: upload dylib
+      - name: Xuất file dylib
         uses: actions/upload-artifact@v4
         with:
-          name: libOSMesa-final
+          name: libOSMesa-Mesa24-AutoEnv
           path: mesa-24.0.5/build_ios/src/gallium/targets/osmesa/libOSMesa.*dylib
