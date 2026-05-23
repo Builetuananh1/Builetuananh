@@ -1,4 +1,4 @@
-name: Build Zink 24.0.5 (Export All - ZIP)
+name: Build Full Mesa + Glapi (ZIP All)
 
 on:
   workflow_dispatch:
@@ -6,42 +6,36 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-
     steps:
       - name: Cài đặt công cụ
         run: |
-          brew install meson ninja bison flex pkg-config vulkan-headers
+          brew install meson ninja bison flex pkg-config
           pip3 install mako packaging --break-system-packages
 
-      - name: Tải MoltenVK 1.4.1
+      - name: Tải MoltenVK
         run: |
           git clone --branch v1.4.1 https://github.com/KhronosGroup/MoltenVK.git
 
-      - name: Tải và giải nén Mesa 24.0.5
+      - name: Tải Mesa 24.0.5
         run: |
           curl -O -L https://archive.mesa3d.org/mesa-24.0.5.tar.xz
           tar -xf mesa-24.0.5.tar.xz
 
-      - name: Patch đường dẫn Vulkan Loader
+      - name: Patch đường dẫn
         run: |
           cd mesa-24.0.5
           find . -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.h" \) -exec sed -i '' 's|"libvulkan\.1\.dylib"|"@executable_path/Frameworks/libvulkan.1.dylib"|g' {} +
 
-      - name: Tiêm Code Auto-Environment vào OSMesa
+      - name: Tiêm Code Auto-Env
         run: |
           cd mesa-24.0.5
           cat << 'EOF' >> src/gallium/targets/osmesa/osmesa.c
-
           #include <stdlib.h>
           #include <dlfcn.h>
           #include <string.h>
-
           __attribute__((constructor))
           void pojaviOS_auto_env() {
-              // Bật fix lỗi cỏ/lá cây
               setenv("MVK_CONFIG_FULL_IMAGE_VIEW_SWIZZLE", "1", 1);
-              
-              // Tự mò thư mục Frameworks để móc JSON
               Dl_info info;
               if (dladdr((void*)pojaviOS_auto_env, &info)) {
                   char json_path[1024];
@@ -55,60 +49,34 @@ jobs:
           }
           EOF
 
-      - name: Tạo cấu hình Build cho iPhone (arm64)
+      - name: Tạo cấu hình iOS
         run: |
           IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           cat <<EOF > ios.ini
           [binaries]
-          c = 'clang'
-          cpp = 'clang++'
-          objc = 'clang'
-          objcpp = 'clang++'
-          ar = 'ar'
-          strip = 'strip'
-
+          c = 'clang'; cpp = 'clang++'; objc = 'clang'; objcpp = 'clang++'; ar = 'ar'; strip = 'strip'
           [built-in options]
-          c_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd', '-DVK_USE_PLATFORM_IOS_MVK']
-          cpp_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd', '-DVK_USE_PLATFORM_IOS_MVK']
-          c_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal', '-framework', 'IOSurface', '-framework', 'UIKit', '-Wl,-rpath,@loader_path']
-          cpp_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-framework', 'Foundation', '-framework', 'Metal', '-framework', 'IOSurface', '-framework', 'UIKit', '-Wl,-rpath,@loader_path']
-
+          c_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd']
+          cpp_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd']
+          c_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-Wl,-rpath,@loader_path']
+          cpp_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-Wl,-rpath,@loader_path']
           [host_machine]
-          system = 'darwin'
-          subsystem = 'ios'
-          cpu_family = 'aarch64'
-          cpu = 'arm64'
-          endian = 'little'
+          system = 'darwin'; subsystem = 'ios'; cpu_family = 'aarch64'; cpu = 'arm64'; endian = 'little'
           EOF
 
-      - name: Cấu hình Meson (Gộp glapi)
+      - name: Meson Setup
         run: |
           cd mesa-24.0.5
-          meson setup build_ios \
-            --cross-file ../ios.ini \
-            -Dbuildtype=release \
-            -Dgallium-drivers=zink,swrast \
-            -Dvulkan-drivers= \
-            -Dmoltenvk-dir=${{ github.workspace }}/MoltenVK/MoltenVK \
-            -Dglx=disabled \
-            -Degl=disabled \
-            -Dplatforms= \
-            -Dshared-glapi=disabled \
-            -Dosmesa=true \
-            -Dllvm=disabled
+          meson setup build_ios --cross-file ../ios.ini -Dbuildtype=release -Dgallium-drivers=zink,swrast -Dshared-glapi=enabled -Dosmesa=true -Dllvm=disabled
 
-      - name: Build
-        run: |
-          cd mesa-24.0.5/build_ios
-          ninja
-
-      - name: Nén toàn bộ thư mục Build thành file ZIP
+      - name: Build & ZIP
         run: |
           cd mesa-24.0.5
-          zip -r Mesa_Full_Build_Output.zip build_ios/
+          ninja -C build_ios
+          zip -r Mesa_Full_Bundle.zip build_ios/
 
-      - name: Xuất file ZIP
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Mesa-Full-Build-ZIP
-          path: mesa-24.0.5/Mesa_Full_Build_Output.zip
+          name: Mesa-Final-Zip
+          path: mesa-24.0.5/Mesa_Full_Bundle.zip
