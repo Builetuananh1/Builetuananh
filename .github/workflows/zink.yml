@@ -1,32 +1,28 @@
-name: Build Full Mesa + Glapi (ZIP All)
-
-on:
-  workflow_dispatch:
-
+name: Build Full Mesa
+on: workflow_dispatch
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Cài đặt công cụ
+      - name: Install Tools
         run: |
           brew install meson ninja bison flex pkg-config
           pip3 install mako packaging --break-system-packages
 
-      - name: Tải MoltenVK
-        run: |
-          git clone --branch v1.4.1 https://github.com/KhronosGroup/MoltenVK.git
+      - name: MoltenVK
+        run: git clone --branch v1.4.1 https://github.com/KhronosGroup/MoltenVK.git
 
-      - name: Tải Mesa 24.0.5
+      - name: Mesa Source
         run: |
           curl -O -L https://archive.mesa3d.org/mesa-24.0.5.tar.xz
           tar -xf mesa-24.0.5.tar.xz
 
-      - name: Patch đường dẫn
+      - name: Patch Path
         run: |
           cd mesa-24.0.5
           find . -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.h" \) -exec sed -i '' 's|"libvulkan\.1\.dylib"|"@executable_path/Frameworks/libvulkan.1.dylib"|g' {} +
 
-      - name: Tiêm Code Auto-Env
+      - name: Inject Code
         run: |
           cd mesa-24.0.5
           cat << 'EOF' >> src/gallium/targets/osmesa/osmesa.c
@@ -49,19 +45,30 @@ jobs:
           }
           EOF
 
-      - name: Tạo cấu hình iOS
+      - name: Create ios.ini
         run: |
           IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           cat <<EOF > ios.ini
           [binaries]
-          c = 'clang'; cpp = 'clang++'; objc = 'clang'; objcpp = 'clang++'; ar = 'ar'; strip = 'strip'
+          c = 'clang'
+          cpp = 'clang++'
+          objc = 'clang'
+          objcpp = 'clang++'
+          ar = 'ar'
+          strip = 'strip'
+
           [built-in options]
           c_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd']
           cpp_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-I${{ github.workspace }}/MoltenVK/MoltenVK/icd']
           c_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-Wl,-rpath,@loader_path']
           cpp_link_args = ['-arch', 'arm64', '-isysroot', '$IOS_SDK', '-miphoneos-version-min=15.0', '-Wl,-rpath,@loader_path']
+
           [host_machine]
-          system = 'darwin'; subsystem = 'ios'; cpu_family = 'aarch64'; cpu = 'arm64'; endian = 'little'
+          system = 'darwin'
+          subsystem = 'ios'
+          cpu_family = 'aarch64'
+          cpu = 'arm64'
+          endian = 'little'
           EOF
 
       - name: Meson Setup
@@ -69,7 +76,7 @@ jobs:
           cd mesa-24.0.5
           meson setup build_ios --cross-file ../ios.ini -Dbuildtype=release -Dgallium-drivers=zink,swrast -Dshared-glapi=enabled -Dosmesa=true -Dllvm=disabled
 
-      - name: Build & ZIP
+      - name: Build and Zip
         run: |
           cd mesa-24.0.5
           ninja -C build_ios
